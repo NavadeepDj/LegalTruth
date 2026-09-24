@@ -1,0 +1,63 @@
+.container {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-md);
+  backdrop-filter: var(--glass-blur);
+}
+
+.label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.toggleWrapper {
+  display: flex;
+  position: relative;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 9999px;
+  padding: 3px;
+  border: 1px solid var(--border-glass);
+}
+
+.optionButton {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 9999px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 0.825rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+}
+
+.optionButton:hover {
+  color: var(--text-primary);
+}
+
+.activeDocOnly {
+  background: rgba(52, 211, 153, 0.15);
+  color: #34d399 !important;
+  font-weight: 600;
+  border: 1px solid rgba(52, 211, 153, 0.3);
+  box-shadow: 0 0 10px rgba(52, 211, 153, 0.2);
+}
+
+.activeDocAndWeb {
+  background: rgba(99, 102, 241, 0.2);
+  color: #a5b4fc !important;
+  font-weight: 600;
+  border: 1px solid rgba(99, 102, 241, 0.4);
+  box-shadow: 0 0 10px rgba(99, 102, 241, 0.2);
+}

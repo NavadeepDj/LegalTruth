@@ -1,0 +1,1 @@
+"""LegalTruth Backend App Package."""

@@ -1,0 +1,41 @@
+.menuContainer {
+  position: absolute;
+  z-index: var(--z-modal);
+  transform: translate(-50%, -100%);
+  margin-top: -8px;
+  background: rgba(10, 14, 26, 0.95);
+  border: 1px solid var(--border-glass-hover);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6), 0 0 15px rgba(99, 102, 241, 0.3);
+  backdrop-filter: var(--glass-blur);
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  animation: fadeIn 150ms ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translate(-50%, -90%); }
+  to { opacity: 1; transform: translate(-50%, -100%); }
+}
+
+.explainButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 4px;
+  background: var(--gradient-primary);
+  color: #ffffff;
+  font-size: 0.8rem;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.4);
+}
+
+.explainButton:hover {
+  filter: brightness(1.1);
+}
