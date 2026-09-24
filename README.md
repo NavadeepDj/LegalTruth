@@ -137,13 +137,9 @@ cp backend/.env.example backend/.env
 
 ### 2. Run the Backend
 ```bash
-# Set up virtual environment and install dependencies using uv
-uv venv backend/.venv
-uv pip install -r backend/requirements.txt --python backend/.venv
-
-# Activate and start server
-.\backend\.venv\Scripts\activate
-uvicorn app.main:app --reload --port 8000
+# Run backend directly using uv (automatically uses the virtual environment)
+cd backend
+uv run uvicorn app.main:app --reload --port 8000
 ```
 Backend API will be running on `http://localhost:8000` (Health check: `http://localhost:8000/health`).
 
