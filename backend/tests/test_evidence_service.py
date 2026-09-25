@@ -79,3 +79,29 @@ def test_local_fallback_job_title_concise():
     assert "Ongole" not in resp.answer
     assert "Dear" not in resp.answer
 
+
+def test_local_fallback_fixed_pay_picks_amount_not_faqs():
+    """Verify that 'what is my fixed pay?' extracts the actual compensation amount and rejects FAQ references."""
+    from app.services.gemini_service import _local_fallback_answer
+
+    doc_text = (
+        "[PAGE 1]\n"
+        "Management Level - 12\n"
+        "Job Title - Packaged App Development Associate\n\n"
+        "[PAGE 2]\n"
+        "Annexure 1: Compensation Details\n"
+        "Annual Fixed Compensation: INR 3,83,000\n"
+        "Annual Total Cash: INR 4,50,000\n\n"
+        "[PAGE 4]\n"
+        "Allsec Payroll FAQs which elaborates the guidelines applicable to structure your Fixed Compensation.\n"
+    )
+
+    resp = _local_fallback_answer(doc_text, "what is my fixed pay?")
+    assert resp.evidence_status == EvidenceStatus.SUPPORTED
+    assert "3,83,000" in resp.answer
+    assert "Your annual fixed compensation is INR 3,83,000." in resp.answer
+    assert resp.evidence[0].page_number == 2
+    assert "FAQs" not in resp.answer
+    assert "Allsec" not in resp.answer
+
+

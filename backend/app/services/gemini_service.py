@@ -32,9 +32,19 @@ def _parse_gemini_response(text: str) -> dict:
     return json.loads(cleaned)
 
 
+SYNONYMS: dict[str, set[str]] = {
+    "pay": {"pay", "salary", "compensation", "ctc", "remuneration", "basic", "allowance"},
+    "salary": {"pay", "salary", "compensation", "ctc", "remuneration", "basic"},
+    "compensation": {"pay", "salary", "compensation", "ctc", "remuneration", "basic"},
+    "fixed": {"fixed", "base", "annual"},
+    "title": {"title", "designation", "role", "position"},
+    "notice": {"notice", "resignation", "termination"},
+}
+
+
 def _local_fallback_answer(document_text: str, question: str) -> AnswerResponse:
     """Deterministic local extraction when external cloud APIs encounter 503 demand spikes."""
-    pages_raw = re.split(r'\[PAGE\s+(\d+)\]', document_text)
+    pages_raw = re.split(r'(?:---|\[)\s*PAGE\s*(\d+)\s*(?:---|\])', document_text)
     page_data: list[tuple[int, str]] = []
     if len(pages_raw) > 1:
         for i in range(1, len(pages_raw), 2):
@@ -49,52 +59,77 @@ def _local_fallback_answer(document_text: str, question: str) -> AnswerResponse:
     stopwords = {"what", "when", "where", "which", "does", "have", "this", "that", "with", "from", "your", "their", "about", "agreement", "document", "tell", "show"}
     meaningful_q_words = q_words - stopwords
 
-    # First attempt: line-level key-value extraction or targeted line match
-    best_line = None
-    best_line_score = 0
-    best_line_page = 1
-    best_line_section = ""
+    # Expand domain synonyms
+    expanded_terms = set(meaningful_q_words)
+    for w in meaningful_q_words:
+        if w in SYNONYMS:
+            expanded_terms.update(SYNONYMS[w])
+
+    is_asking_amount = any(w in q_lower for w in ["pay", "salary", "compensation", "fixed", "ctc", "amount", "bonus"])
+
+    # First attempt: line-level key-value extraction or targeted line match with adjacent table rows
+    best_candidate = None
+    best_score = -100
+    best_page = 1
+    best_section = ""
 
     for p_num, p_text in page_data:
         lines = [l.strip() for l in re.split(r'[\r\n]+', p_text) if l.strip() and not l.startswith('---')]
         current_section = ""
-        for line in lines:
+        for idx, line in enumerate(lines):
             sec_match = re.search(r'(Section\s+[\d.]+|Article\s+[\d.]+|Clause\s+[\d.]+)', line, re.IGNORECASE)
             if sec_match:
                 current_section = sec_match.group(0)
 
-            l_lower = line.lower()
-            score = sum(2 for w in meaningful_q_words if w in l_lower)
-            if any(term in q_lower and term in l_lower for term in ['title', 'job', 'role', 'designation', 'salary', 'compensation', 'notice', 'probation', 'date', 'location', 'terminate', 'termination']):
-                score += 3
+            candidate_line = line
+            # If line is a table header/label and next line is a monetary amount/value, merge them
+            if idx + 1 < len(lines):
+                next_line = lines[idx + 1]
+                if re.match(r'^(?:INR|Rs\.?|₹|\$)?\s*[\d,]+', next_line, re.IGNORECASE) and not re.search(r'[\d,]', line):
+                    candidate_line = f"{line}: {next_line}"
 
-            if score > best_line_score:
-                best_line_score = score
-                best_line = line
-                best_line_page = p_num
-                best_line_section = current_section
+            l_lower = candidate_line.lower()
+            score = 0
+            for term in expanded_terms:
+                if re.search(r'\b' + re.escape(term) + r'\b', l_lower):
+                    score += 3
 
-    if best_line and best_line_score >= 3:
-        kv = re.match(r'^([^:\-]+)[\s:\-]+(.+)$', best_line)
+            # Bonus for numerical/monetary amount when asking about pay/amounts
+            has_currency = bool(re.search(r'(?:INR|Rs\.?|₹|\$)\s*[\d,]+|\b\d{1,3}(?:,\d{2,3})+\b', candidate_line))
+            if is_asking_amount and has_currency:
+                score += 5
+
+            # Penalize meta/FAQ reference sentences
+            if any(meta in l_lower for meta in ["faqs", "guidelines", "refer to", "elaborates", "applicable to structure", "subject to submission"]):
+                score -= 6
+
+            if score > best_score:
+                best_score = score
+                best_candidate = candidate_line
+                best_page = p_num
+                best_section = current_section
+
+    if best_candidate and best_score >= 3:
+        kv = re.match(r'^([^:\-]+)[\s:\-]+(.+)$', best_candidate)
         if kv and len(kv.group(1).split()) <= 4:
             k = kv.group(1).strip()
             v = kv.group(2).strip().rstrip('.')
             answer = f"Your {k.lower()} is {v}."
         else:
-            answer = best_line.rstrip('.') + "."
+            answer = best_candidate.rstrip('.') + "."
 
         return AnswerResponse(
             answer=answer,
             evidence_status=EvidenceStatus.SUPPORTED,
             evidence=[
                 EvidenceItem(
-                    page_number=best_line_page,
-                    section=best_line_section,
-                    quote=best_line,
+                    page_number=best_page,
+                    section=best_section,
+                    quote=best_candidate,
                     relevance="Directly states the contractual terms queried.",
                 )
             ],
-            reasoning=f"Identified matching contractual terms on Page {best_line_page}.",
+            reasoning=f"Identified matching contractual terms on Page {best_page}.",
             source_boundary="DOCUMENT",
         )
 
@@ -197,7 +232,7 @@ def ask_document_question(
     question_prompt = build_question_prompt(question, mode)
     contents.append(types.Content(role="user", parts=[types.Part(text=question_prompt)]))
 
-    models_to_try = [settings.GEMINI_MODEL, "gemini-3.6-flash", "gemini-3.1-flash-lite", "gemini-flash-latest", "gemini-3.8-flash"]
+    models_to_try = [settings.GEMINI_MODEL, "gemini-3.5-flash-lite", "gemini-flash-lite-latest", "gemini-3.1-flash-lite", "gemini-3.6-flash", "gemini-3.7-flash"]
     seen = set()
     candidate_models = [m for m in models_to_try if m and not (m in seen or seen.add(m))]
 
@@ -261,7 +296,7 @@ def explain_clause(
         types.Content(role="user", parts=[types.Part(text=clause_prompt)]),
     ]
 
-    models_to_try = [settings.GEMINI_MODEL, "gemini-3.6-flash", "gemini-3.1-flash-lite", "gemini-flash-latest", "gemini-3.8-flash"]
+    models_to_try = [settings.GEMINI_MODEL, "gemini-3.5-flash-lite", "gemini-flash-lite-latest", "gemini-3.1-flash-lite", "gemini-3.6-flash", "gemini-3.7-flash"]
     seen = set()
     candidate_models = [m for m in models_to_try if m and not (m in seen or seen.add(m))]
 
