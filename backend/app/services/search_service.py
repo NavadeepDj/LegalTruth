@@ -68,7 +68,7 @@ Search for relevant legal information from official and authoritative public sou
 
 Respond with the JSON format specified in your instructions."""
 
-    models_to_try = [settings.GEMINI_MODEL, "gemini-flash-latest", "gemini-3.5-flash"]
+    models_to_try = [settings.GEMINI_MODEL, "gemini-3.6-flash", "gemini-3.1-flash-lite", "gemini-flash-latest", "gemini-3.8-flash"]
     seen = set()
     candidate_models = [m for m in models_to_try if m and not (m in seen or seen.add(m))]
 
