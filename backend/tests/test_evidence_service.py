@@ -54,3 +54,28 @@ def test_answer_clause(mock_explain):
     resp = answer_clause("Information is confidential", 2, "full doc")
     assert resp.evidence_status == EvidenceStatus.SUPPORTED
     assert "confidentiality" in resp.answer.lower()
+
+
+def test_local_fallback_job_title_concise():
+    """Verify that local fallback extracts concise answers without raw paragraph dumping."""
+    from app.services.gemini_service import _local_fallback_answer
+
+    offer_letter_text = (
+        "--- PAGE 1 ---\n"
+        "Ongole 523001\n"
+        "Dear Maruthi Navadeep Marella,\n"
+        "We are pleased to extend an Offer to join Accenture Solutions Private Limited:\n"
+        "Management Level - 12\n"
+        "Job Title - Packaged App Development Associate\n"
+        "Job Family Group - Software Engineering\n"
+        "All employees are expected to work from their assigned office."
+    )
+
+    resp = _local_fallback_answer(offer_letter_text, "my job title?")
+    assert resp.evidence_status == EvidenceStatus.SUPPORTED
+    assert resp.answer == "Your job title is Packaged App Development Associate."
+    assert len(resp.evidence) == 1
+    assert resp.evidence[0].quote == "Job Title - Packaged App Development Associate"
+    assert "Ongole" not in resp.answer
+    assert "Dear" not in resp.answer
+

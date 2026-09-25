@@ -7,6 +7,7 @@ interface QuestionInputProps {
   onAsk: (question: string) => void;
   isLoading: boolean;
   disabled?: boolean;
+  showSuggestions?: boolean;
 }
 
 const SAMPLE_QUESTIONS = [
@@ -16,7 +17,12 @@ const SAMPLE_QUESTIONS = [
   'What are my confidentiality obligations?',
 ];
 
-export function QuestionInput({ onAsk, isLoading, disabled = false }: QuestionInputProps) {
+export function QuestionInput({
+  onAsk,
+  isLoading,
+  disabled = false,
+  showSuggestions = true,
+}: QuestionInputProps) {
   const [query, setQuery] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -35,23 +41,25 @@ export function QuestionInput({ onAsk, isLoading, disabled = false }: QuestionIn
 
   return (
     <div className={styles.inputContainer}>
-      <div
-        className={styles.suggestionsWrapper}
-        role="region"
-        aria-label="Suggested contract questions"
-      >
-        {SAMPLE_QUESTIONS.map((q, idx) => (
-          <button
-            key={idx}
-            type="button"
-            className={styles.suggestionChip}
-            onClick={() => handleSuggestionClick(q)}
-            disabled={isLoading || disabled}
-          >
-            {q}
-          </button>
-        ))}
-      </div>
+      {showSuggestions && (
+        <div
+          className={styles.suggestionsWrapper}
+          role="region"
+          aria-label="Suggested contract questions"
+        >
+          {SAMPLE_QUESTIONS.map((q, idx) => (
+            <button
+              key={idx}
+              type="button"
+              className={styles.suggestionChip}
+              onClick={() => handleSuggestionClick(q)}
+              disabled={isLoading || disabled}
+            >
+              {q}
+            </button>
+          ))}
+        </div>
+      )}
 
       <form className={styles.inputForm} onSubmit={handleSubmit}>
         <input

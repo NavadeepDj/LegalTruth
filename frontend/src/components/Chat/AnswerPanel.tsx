@@ -68,6 +68,7 @@ export function AnswerPanel({
         onAsk={onAsk}
         isLoading={isLoading}
         disabled={!hasDocument}
+        showSuggestions={messages.length === 0}
       />
     </section>
   );

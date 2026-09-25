@@ -105,15 +105,39 @@
   gap: 6px;
 }
 
-.reasoningBox {
+.reasoningDetails {
   margin-top: 12px;
-  padding: 10px 14px;
-  border-radius: var(--radius-sm);
-  background: rgba(0, 0, 0, 0.25);
   border: 1px solid var(--border-glass);
+  border-radius: var(--radius-sm);
+  background: rgba(0, 0, 0, 0.2);
+  overflow: hidden;
+}
+
+.reasoningSummary {
+  padding: 8px 12px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer;
+  user-select: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.02);
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.reasoningSummary:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-primary);
+}
+
+.reasoningBox {
+  padding: 10px 14px;
   font-size: 0.825rem;
   color: var(--text-secondary);
   line-height: 1.5;
+  border-top: 1px solid var(--border-glass);
 }
 
 .disclaimer {

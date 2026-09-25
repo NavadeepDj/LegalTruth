@@ -88,11 +88,16 @@ export function ConversationHistory({
                 </div>
               )}
 
-              {/* Reasoning breakdown */}
+              {/* Reasoning breakdown - collapsed by default to keep answers clean */}
               {res && res.reasoning && (
-                <div className={styles.reasoningBox}>
-                  <strong>Analysis derivation:</strong> {res.reasoning}
-                </div>
+                <details className={styles.reasoningDetails}>
+                  <summary className={styles.reasoningSummary}>
+                    <span>🔍 View Analysis Derivation</span>
+                  </summary>
+                  <div className={styles.reasoningBox}>
+                    {res.reasoning}
+                  </div>
+                </details>
               )}
 
               {/* If NOT_FOUND */}
@@ -116,7 +121,7 @@ export function ConversationHistory({
                 </div>
               )}
 
-              {res?.disclaimer && (
+              {res?.disclaimer && idx === messages.length - 1 && (
                 <div className={styles.disclaimer} role="note">
                   {res.disclaimer}
                 </div>

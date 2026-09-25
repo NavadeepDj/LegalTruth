@@ -49,6 +49,56 @@ def _local_fallback_answer(document_text: str, question: str) -> AnswerResponse:
     stopwords = {"what", "when", "where", "which", "does", "have", "this", "that", "with", "from", "your", "their", "about", "agreement", "document", "tell", "show"}
     meaningful_q_words = q_words - stopwords
 
+    # First attempt: line-level key-value extraction or targeted line match
+    best_line = None
+    best_line_score = 0
+    best_line_page = 1
+    best_line_section = ""
+
+    for p_num, p_text in page_data:
+        lines = [l.strip() for l in re.split(r'[\r\n]+', p_text) if l.strip() and not l.startswith('---')]
+        current_section = ""
+        for line in lines:
+            sec_match = re.search(r'(Section\s+[\d.]+|Article\s+[\d.]+|Clause\s+[\d.]+)', line, re.IGNORECASE)
+            if sec_match:
+                current_section = sec_match.group(0)
+
+            l_lower = line.lower()
+            score = sum(2 for w in meaningful_q_words if w in l_lower)
+            if any(term in q_lower and term in l_lower for term in ['title', 'job', 'role', 'designation', 'salary', 'compensation', 'notice', 'probation', 'date', 'location', 'terminate', 'termination']):
+                score += 3
+
+            if score > best_line_score:
+                best_line_score = score
+                best_line = line
+                best_line_page = p_num
+                best_line_section = current_section
+
+    if best_line and best_line_score >= 3:
+        kv = re.match(r'^([^:\-]+)[\s:\-]+(.+)$', best_line)
+        if kv and len(kv.group(1).split()) <= 4:
+            k = kv.group(1).strip()
+            v = kv.group(2).strip().rstrip('.')
+            answer = f"Your {k.lower()} is {v}."
+        else:
+            answer = best_line.rstrip('.') + "."
+
+        return AnswerResponse(
+            answer=answer,
+            evidence_status=EvidenceStatus.SUPPORTED,
+            evidence=[
+                EvidenceItem(
+                    page_number=best_line_page,
+                    section=best_line_section,
+                    quote=best_line,
+                    relevance="Directly states the contractual terms queried.",
+                )
+            ],
+            reasoning=f"Identified matching contractual terms on Page {best_line_page}.",
+            source_boundary="DOCUMENT",
+        )
+
+    # Second attempt: paragraph / sentence extraction
     best_chunk = None
     best_score = 0
     best_page = 1
@@ -70,12 +120,13 @@ def _local_fallback_answer(document_text: str, question: str) -> AnswerResponse:
                 best_section = sec_match.group(0) if sec_match else ""
 
     if best_score >= 2 and best_chunk:
-        sentences = re.split(r'(?<=[.!?])\s+', best_chunk)
+        sentences = [s.strip() for s in re.split(r'(?<=[.!?])\s+|[\r\n]+', best_chunk) if s.strip()]
         matching_sentences = [s for s in sentences if any(w in s.lower() for w in meaningful_q_words)]
-        quote = " ".join(matching_sentences[:2]) if matching_sentences else best_chunk[:250]
+        quote = matching_sentences[0] if matching_sentences else sentences[0]
+        answer = quote.rstrip('.') + "."
 
         return AnswerResponse(
-            answer=f"Based on your document ({f'{best_section}, ' if best_section else ''}Page {best_page}):\n\n{quote}",
+            answer=answer,
             evidence_status=EvidenceStatus.SUPPORTED,
             evidence=[
                 EvidenceItem(
@@ -85,7 +136,7 @@ def _local_fallback_answer(document_text: str, question: str) -> AnswerResponse:
                     relevance="Directly states the contractual terms queried.",
                 )
             ],
-            reasoning=f"Found matching contractual terms on Page {best_page} corresponding to '{question}'.",
+            reasoning=f"Found matching contractual terms on Page {best_page}.",
             source_boundary="DOCUMENT",
         )
     else:
