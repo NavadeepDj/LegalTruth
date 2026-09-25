@@ -69,40 +69,58 @@ def ask_document_question(
     question_prompt = build_question_prompt(question, mode)
     contents.append(types.Content(role="user", parts=[types.Part(text=question_prompt)]))
 
-    try:
-        response = client.models.generate_content(
-            model=settings.GEMINI_MODEL,
-            contents=contents,
-            config=types.GenerateContentConfig(
-                system_instruction=SYSTEM_PROMPT,
-                temperature=0.1,
-                response_mime_type="application/json",
-            ),
-        )
+    models_to_try = [settings.GEMINI_MODEL, "gemini-flash-latest", "gemini-3.5-flash"]
+    # Deduplicate while preserving order
+    seen = set()
+    candidate_models = [m for m in models_to_try if m and not (m in seen or seen.add(m))]
 
-        result = _parse_gemini_response(response.text)
+    last_error = None
+    for model_name in candidate_models:
+        try:
+            logger.info(f"Attempting question generation with model: {model_name}")
+            response = client.models.generate_content(
+                model=model_name,
+                contents=contents,
+                config=types.GenerateContentConfig(
+                    system_instruction=SYSTEM_PROMPT,
+                    temperature=0.1,
+                    response_mime_type="application/json",
+                ),
+            )
 
-        return AnswerResponse(
-            answer=result.get("answer", ""),
-            evidence_status=EvidenceStatus(result.get("evidence_status", "NOT_FOUND")),
-            evidence=[EvidenceItem(**e) for e in result.get("evidence", [])],
-            reasoning=result.get("reasoning", ""),
-            why_cant_answer=result.get("why_cant_answer", ""),
-            action_guidance=result.get("action_guidance", []),
-            source_boundary=result.get("source_boundary", "DOCUMENT"),
-        )
+            result = _parse_gemini_response(response.text)
 
-    except json.JSONDecodeError as e:
-        logger.error(f"Failed to parse Gemini response as JSON: {e}")
-        return AnswerResponse(
-            answer="I was unable to process this question. Please try rephrasing.",
-            evidence_status=EvidenceStatus.NOT_FOUND,
-            reasoning=f"Response parsing error: {str(e)}",
-            source_boundary="DOCUMENT",
-        )
-    except Exception as e:
-        logger.error(f"Gemini API error: {e}")
-        raise
+            return AnswerResponse(
+                answer=result.get("answer", ""),
+                evidence_status=EvidenceStatus(result.get("evidence_status", "NOT_FOUND")),
+                evidence=[EvidenceItem(**e) for e in result.get("evidence", [])],
+                reasoning=result.get("reasoning", ""),
+                why_cant_answer=result.get("why_cant_answer", ""),
+                action_guidance=result.get("action_guidance", []),
+                source_boundary=result.get("source_boundary", "DOCUMENT"),
+            )
+
+        except json.JSONDecodeError as e:
+            logger.error(f"Failed to parse Gemini response as JSON: {e}")
+            return AnswerResponse(
+                answer="I was unable to process this question. Please try rephrasing.",
+                evidence_status=EvidenceStatus.NOT_FOUND,
+                reasoning=f"Response parsing error: {str(e)}",
+                source_boundary="DOCUMENT",
+            )
+        except Exception as e:
+            logger.warning(f"Model {model_name} failed with {type(e).__name__}: {e}. Trying fallback model if available...")
+            last_error = e
+            continue
+
+    logger.error(f"All candidate models exhausted. Last error: {last_error}")
+    return AnswerResponse(
+        answer="The AI model is currently experiencing high demand. Spikes in demand are usually temporary. Please try asking again in a few moments.",
+        evidence_status=EvidenceStatus.NOT_FOUND,
+        why_cant_answer=f"Service temporarily busy (503/429): {str(last_error)}",
+        action_guidance=["Wait 5-10 seconds and try re-submitting your question."],
+        source_boundary="DOCUMENT",
+    )
 
 
 def explain_clause(
@@ -122,28 +140,44 @@ def explain_clause(
         types.Content(role="user", parts=[types.Part(text=clause_prompt)]),
     ]
 
-    try:
-        response = client.models.generate_content(
-            model=settings.GEMINI_MODEL,
-            contents=contents,
-            config=types.GenerateContentConfig(
-                system_instruction=CLAUSE_SYSTEM_PROMPT,
-                temperature=0.1,
-                response_mime_type="application/json",
-            ),
-        )
+    models_to_try = [settings.GEMINI_MODEL, "gemini-flash-latest", "gemini-3.5-flash"]
+    seen = set()
+    candidate_models = [m for m in models_to_try if m and not (m in seen or seen.add(m))]
 
-        result = _parse_gemini_response(response.text)
+    last_error = None
+    for model_name in candidate_models:
+        try:
+            logger.info(f"Attempting clause explanation with model: {model_name}")
+            response = client.models.generate_content(
+                model=model_name,
+                contents=contents,
+                config=types.GenerateContentConfig(
+                    system_instruction=CLAUSE_SYSTEM_PROMPT,
+                    temperature=0.1,
+                    response_mime_type="application/json",
+                ),
+            )
 
-        return AnswerResponse(
-            answer=result.get("answer", ""),
-            evidence_status=EvidenceStatus.SUPPORTED,
-            evidence=[EvidenceItem(**e) for e in result.get("evidence", [])],
-            reasoning=result.get("reasoning", ""),
-            action_guidance=result.get("action_guidance", []),
-            source_boundary="DOCUMENT",
-        )
+            result = _parse_gemini_response(response.text)
 
-    except Exception as e:
-        logger.error(f"Gemini clause explanation error: {e}")
-        raise
+            return AnswerResponse(
+                answer=result.get("answer", ""),
+                evidence_status=EvidenceStatus.SUPPORTED,
+                evidence=[EvidenceItem(**e) for e in result.get("evidence", [])],
+                reasoning=result.get("reasoning", ""),
+                action_guidance=result.get("action_guidance", []),
+                source_boundary="DOCUMENT",
+            )
+
+        except Exception as e:
+            logger.warning(f"Clause explanation model {model_name} failed with {type(e).__name__}: {e}. Trying fallback model...")
+            last_error = e
+            continue
+
+    logger.error(f"All candidate models exhausted for clause explanation. Last error: {last_error}")
+    return AnswerResponse(
+        answer="The clause analysis model is currently experiencing high demand. Please try again shortly.",
+        evidence_status=EvidenceStatus.NOT_FOUND,
+        why_cant_answer=f"Service temporarily busy (503/429): {str(last_error)}",
+        source_boundary="DOCUMENT",
+    )

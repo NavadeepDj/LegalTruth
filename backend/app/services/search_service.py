@@ -68,60 +68,70 @@ Search for relevant legal information from official and authoritative public sou
 
 Respond with the JSON format specified in your instructions."""
 
-    try:
-        response = client.models.generate_content(
-            model=settings.GEMINI_MODEL,
-            contents=search_prompt,
-            config=types.GenerateContentConfig(
-                system_instruction=SEARCH_SYSTEM_PROMPT,
-                temperature=0.2,
-                tools=[types.Tool(google_search=types.GoogleSearch())],
-            ),
-        )
+    models_to_try = [settings.GEMINI_MODEL, "gemini-flash-latest", "gemini-3.5-flash"]
+    seen = set()
+    candidate_models = [m for m in models_to_try if m and not (m in seen or seen.add(m))]
 
-        # Parse JSON from response text
-        cleaned = response.text.strip()
-        if cleaned.startswith("```"):
-            lines = cleaned.split("\n")
-            lines = [l for l in lines[1:] if l.strip() != "```"]
-            cleaned = "\n".join(lines)
-
+    last_error = None
+    for model_name in candidate_models:
         try:
-            result = json.loads(cleaned)
-        except json.JSONDecodeError:
-            # If JSON parsing fails, extract what we can
-            result = {"answer": cleaned, "web_sources": [], "action_guidance": []}
+            logger.info(f"Attempting Google search grounding with model: {model_name}")
+            response = client.models.generate_content(
+                model=model_name,
+                contents=search_prompt,
+                config=types.GenerateContentConfig(
+                    system_instruction=SEARCH_SYSTEM_PROMPT,
+                    temperature=0.2,
+                    tools=[types.Tool(google_search=types.GoogleSearch())],
+                ),
+            )
 
-        web_sources = [
-            WebSource(**src) for src in result.get("web_sources", [])
-        ]
+            # Parse JSON from response text
+            cleaned = response.text.strip()
+            if cleaned.startswith("```"):
+                lines = cleaned.split("\n")
+                lines = [l for l in lines[1:] if l.strip() != "```"]
+                cleaned = "\n".join(lines)
 
-        # Also check grounding metadata for additional sources
-        if response.candidates and response.candidates[0].grounding_metadata:
-            grounding = response.candidates[0].grounding_metadata
-            if hasattr(grounding, 'grounding_chunks') and grounding.grounding_chunks:
-                for chunk in grounding.grounding_chunks:
-                    if hasattr(chunk, 'web') and chunk.web:
-                        existing_urls = {s.url for s in web_sources}
-                        url = getattr(chunk.web, 'uri', '') or ''
-                        if url and url not in existing_urls:
-                            web_sources.append(WebSource(
-                                title=getattr(chunk.web, 'title', '') or "External Source",
-                                url=url,
-                                snippet="",
-                                source_type="web",
-                            ))
+            try:
+                result = json.loads(cleaned)
+            except json.JSONDecodeError:
+                result = {"answer": cleaned, "web_sources": [], "action_guidance": []}
 
-        return {
-            "answer": result.get("answer", ""),
-            "web_sources": web_sources,
-            "action_guidance": result.get("action_guidance", []),
-        }
+            web_sources = [
+                WebSource(**src) for src in result.get("web_sources", [])
+            ]
 
-    except Exception as e:
-        logger.error(f"Google Search grounding error: {e}")
-        return {
-            "answer": "We were unable to search external sources at this time.",
-            "web_sources": [],
-            "action_guidance": ["Try searching for this topic on official government websites."],
-        }
+            # Also check grounding metadata for additional sources
+            if response.candidates and response.candidates[0].grounding_metadata:
+                grounding = response.candidates[0].grounding_metadata
+                if hasattr(grounding, 'grounding_chunks') and grounding.grounding_chunks:
+                    for chunk in grounding.grounding_chunks:
+                        if hasattr(chunk, 'web') and chunk.web:
+                            existing_urls = {s.url for s in web_sources}
+                            url = getattr(chunk.web, 'uri', '') or ''
+                            if url and url not in existing_urls:
+                                web_sources.append(WebSource(
+                                    title=getattr(chunk.web, 'title', '') or "External Source",
+                                    url=url,
+                                    snippet="",
+                                    source_type="web",
+                                ))
+
+            return {
+                "answer": result.get("answer", ""),
+                "web_sources": web_sources,
+                "action_guidance": result.get("action_guidance", []),
+            }
+
+        except Exception as e:
+            logger.warning(f"Search grounding model {model_name} failed with {type(e).__name__}: {e}. Trying fallback...")
+            last_error = e
+            continue
+
+    logger.error(f"Google Search grounding failed across models: {last_error}")
+    return {
+        "answer": "We were unable to search external sources due to high demand. Please try again shortly.",
+        "web_sources": [],
+        "action_guidance": ["Try searching for this topic on official government websites."],
+    }
