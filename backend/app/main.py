@@ -11,6 +11,7 @@ from app.config import settings
 from app.middleware.security import SecurityHeadersMiddleware
 from app.middleware.rate_limit import RateLimiterMiddleware
 from app.models.session_store import store
+from app.services.cache_service import query_cache
 
 logger = logging.getLogger("legaltruth")
 
@@ -19,7 +20,7 @@ async def _session_cleanup_worker():
     """Background task to periodically evict expired sessions and free memory."""
     while True:
         try:
-            await asyncio.sleep(900)  # Run every 15 minutes
+            await asyncio.sleep(settings.SESSION_CLEANUP_INTERVAL_SECONDS)
             purged = store.cleanup_expired_sessions(settings.SESSION_TTL_HOURS)
             if purged > 0:
                 logger.info(f"Purged {purged} expired sessions from memory.")
@@ -81,7 +82,18 @@ async def global_exception_handler(request: Request, exc: Exception):
 
 @app.get("/health")
 async def health_check():
+    """Lightweight liveness probe for load balancers and orchestrators."""
     return {"status": "healthy", "service": "legaltruth-api"}
+
+
+@app.get("/metrics")
+async def metrics():
+    """Operational metrics for efficiency observability: cache stats and session count."""
+    return {
+        "cache": query_cache.stats(),
+        "active_sessions": len(store._sessions),
+        "cleanup_interval_seconds": settings.SESSION_CLEANUP_INTERVAL_SECONDS,
+    }
 
 
 # Register routers
