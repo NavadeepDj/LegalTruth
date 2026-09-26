@@ -1,4 +1,3 @@
-import React from 'react';
 import { DropZone } from '@/components/Upload/DropZone';
 
 describe('DropZone Component', () => {

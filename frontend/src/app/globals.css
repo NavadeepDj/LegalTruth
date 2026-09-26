@@ -73,7 +73,7 @@ body {
   background: var(--border-glass-hover);
 }
 
-/* Screen reader only utility */
+/* Screen reader only utility with visible focus on keyboard tab */
 .sr-only {
   position: absolute;
   width: 1px;
@@ -84,6 +84,26 @@ body {
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
   border-width: 0;
+}
+
+.sr-only:focus,
+.sr-only:focus-visible {
+  position: fixed;
+  top: 16px;
+  left: 16px;
+  width: auto;
+  height: auto;
+  padding: 10px 16px;
+  margin: 0;
+  overflow: visible;
+  clip: auto;
+  white-space: normal;
+  background: #1e293b;
+  color: #ffffff;
+  border: 2px solid #6366f1;
+  border-radius: var(--radius-sm);
+  z-index: 9999;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
 }
 
 /* Shimmer animation for loading states */

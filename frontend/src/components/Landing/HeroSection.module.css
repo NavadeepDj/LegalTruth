@@ -1,47 +1,66 @@
 .heroContainer {
-  min-height: 100vh;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 64px 24px;
+  padding: 80px 24px 60px 24px;
   position: relative;
   overflow: hidden;
+  text-align: center;
 }
 
 .heroContent {
-  max-width: 1100px;
+  max-width: 1080px;
   width: 100%;
   margin: 0 auto;
-  text-align: center;
   z-index: 1;
 }
 
 .pillBadge {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 6px 16px;
+  gap: 10px;
+  padding: 8px 20px;
   border-radius: 9999px;
   background: rgba(99, 102, 241, 0.12);
-  border: 1px solid rgba(99, 102, 241, 0.3);
-  color: var(--text-accent);
+  border: 1px solid rgba(99, 102, 241, 0.35);
+  color: #a5b4fc;
   font-size: 0.875rem;
-  font-weight: 500;
-  margin-bottom: 24px;
-  box-shadow: 0 0 15px rgba(99, 102, 241, 0.15);
+  font-weight: 600;
+  margin-bottom: 28px;
+  box-shadow: 0 0 20px rgba(99, 102, 241, 0.2);
+  animation: pulseGlow 3s infinite ease-in-out;
+}
+
+.liveDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #34d399;
+  box-shadow: 0 0 8px #34d399;
+  display: inline-block;
+}
+
+@keyframes pulseGlow {
+  0%, 100% {
+    box-shadow: 0 0 15px rgba(99, 102, 241, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 25px rgba(99, 102, 241, 0.4);
+  }
 }
 
 .title {
-  font-size: clamp(2.5rem, 5vw, 4.25rem);
+  font-size: clamp(2.4rem, 5.5vw, 4.4rem);
   font-weight: 800;
-  letter-spacing: -0.03em;
+  letter-spacing: -0.035em;
   line-height: 1.15;
-  margin-bottom: 20px;
+  margin-bottom: 24px;
+  color: #ffffff;
 }
 
 .gradientText {
-  background: var(--gradient-primary);
+  background: linear-gradient(135deg, #818cf8 0%, #c084fc 50%, #f472b6 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   display: inline-block;
@@ -49,10 +68,10 @@
 
 .subtitle {
   font-size: clamp(1.1rem, 2vw, 1.35rem);
-  color: var(--text-secondary);
-  max-width: 780px;
-  margin: 0 auto 36px auto;
-  line-height: 1.6;
+  color: #94a3b8;
+  max-width: 800px;
+  margin: 0 auto 40px auto;
+  line-height: 1.65;
 }
 
 .ctaGroup {
@@ -60,7 +79,7 @@
   align-items: center;
   justify-content: center;
   gap: 16px;
-  margin-bottom: 64px;
+  margin-bottom: 56px;
   flex-wrap: wrap;
 }
 
@@ -68,104 +87,105 @@
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  padding: 14px 28px;
-  border-radius: var(--radius-md);
-  background: var(--gradient-primary);
+  padding: 15px 32px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a855f7 100%);
   color: #ffffff;
-  font-weight: 600;
+  font-weight: 700;
   font-size: 1.05rem;
   text-decoration: none;
   border: none;
   cursor: pointer;
-  box-shadow: 0 4px 20px rgba(99, 102, 241, 0.4);
-  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+  box-shadow: 0 6px 25px rgba(99, 102, 241, 0.45);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .primaryButton:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 25px rgba(99, 102, 241, 0.6);
+  box-shadow: 0 10px 30px rgba(99, 102, 241, 0.65);
 }
 
 .secondaryButton {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 14px 24px;
-  border-radius: var(--radius-md);
+  padding: 15px 28px;
+  border-radius: 12px;
   background: rgba(255, 255, 255, 0.05);
-  border: 1px solid var(--border-glass);
-  color: var(--text-primary);
-  font-weight: 500;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #f1f5f9;
+  font-weight: 600;
   font-size: 1rem;
   text-decoration: none;
   cursor: pointer;
-  backdrop-filter: var(--glass-blur);
-  transition: background var(--transition-fast), border-color var(--transition-fast);
+  backdrop-filter: blur(12px);
+  transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
 }
 
 .secondaryButton:hover {
   background: rgba(255, 255, 255, 0.1);
-  border-color: var(--border-glass-hover);
+  border-color: rgba(99, 102, 241, 0.5);
+  transform: translateY(-2px);
 }
 
-.featureGrid {
+.pillarsBanner {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 24px;
-  text-align: left;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
   margin-top: 20px;
+  text-align: left;
 }
 
-.featureCard {
-  padding: 28px;
+.pillarCard {
   background: rgba(255, 255, 255, 0.03);
-  backdrop-filter: var(--glass-blur);
-  border: 1px solid var(--border-glass);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-glass);
-  transition: transform var(--transition-normal), border-color var(--transition-normal);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  padding: 20px 18px;
+  transition: transform 0.25s ease, border-color 0.25s ease;
 }
 
-.featureCard:hover {
-  transform: translateY(-4px);
-  border-color: rgba(99, 102, 241, 0.4);
+.pillarCard:hover {
+  transform: translateY(-3px);
+  border-color: rgba(99, 102, 241, 0.35);
+  background: rgba(255, 255, 255, 0.05);
 }
 
-.iconWrapper {
-  width: 48px;
-  height: 48px;
-  border-radius: var(--radius-md);
-  background: rgba(99, 102, 241, 0.15);
-  border: 1px solid rgba(99, 102, 241, 0.25);
+.pillarHeader {
   display: flex;
   align-items: center;
-  justify-content: center;
-  font-size: 1.5rem;
-  margin-bottom: 20px;
+  gap: 10px;
+  margin-bottom: 8px;
 }
 
-.featureTitle {
-  font-size: 1.2rem;
-  font-weight: 700;
-  color: var(--text-primary);
-  margin-bottom: 10px;
+.pillarIcon {
+  font-size: 1.3rem;
 }
 
-.featureDescription {
+.pillarTitle {
   font-size: 0.95rem;
-  color: var(--text-secondary);
-  line-height: 1.6;
+  font-weight: 700;
+  color: #ffffff;
 }
 
-.disclaimerBanner {
-  margin-top: 48px;
-  padding: 12px 20px;
-  border-radius: var(--radius-sm);
-  background: rgba(245, 158, 11, 0.08);
-  border: 1px solid rgba(245, 158, 11, 0.2);
-  color: #fbbf24;
+.pillarDesc {
   font-size: 0.85rem;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
+  color: #94a3b8;
+  line-height: 1.5;
+  margin: 0;
+}
+
+@media (max-width: 960px) {
+  .pillarsBanner {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 580px) {
+  .pillarsBanner {
+    grid-template-columns: 1fr;
+  }
+  .heroContainer {
+    padding: 60px 16px 40px 16px;
+  }
 }

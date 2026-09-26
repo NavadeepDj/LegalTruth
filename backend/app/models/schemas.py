@@ -64,18 +64,18 @@ class AnswerResponse(BaseModel):
 
 class QuestionRequest(BaseModel):
     """User question request."""
-    question: str
-    mode: str = "document_and_web"
-    session_id: str
-    document_id: str
+    question: str = Field(..., min_length=1, max_length=2000, description="The legal question to answer")
+    mode: str = Field(default="document_and_web", pattern="^(document_only|document_and_web)$")
+    session_id: str = Field(..., min_length=1, max_length=128)
+    document_id: str = Field(..., min_length=1, max_length=128)
 
 
 class ClauseRequest(BaseModel):
     """Request to explain a specific clause."""
-    clause_text: str
-    page_number: int
-    session_id: str
-    document_id: str
+    clause_text: str = Field(..., min_length=1, max_length=10000, description="Highlighted clause text")
+    page_number: int = Field(..., ge=1, le=10000, description="Page number of the clause")
+    session_id: str = Field(..., min_length=1, max_length=128)
+    document_id: str = Field(..., min_length=1, max_length=128)
 
 
 class UploadResponse(BaseModel):

@@ -76,6 +76,20 @@ class SessionStore:
         if session:
             session.conversation = []
 
+    def cleanup_expired_sessions(self, max_age_hours: int = 24) -> int:
+        """Purge sessions older than max_age_hours to prevent memory leaks."""
+        now = datetime.now(timezone.utc)
+        expired_ids = []
+        for s_id, session in list(self._sessions.items()):
+            age_hours = (now - session.created_at).total_seconds() / 3600.0
+            if age_hours > max_age_hours:
+                expired_ids.append(s_id)
+
+        for s_id in expired_ids:
+            del self._sessions[s_id]
+
+        return len(expired_ids)
+
 
 # Global singleton
 store = SessionStore()

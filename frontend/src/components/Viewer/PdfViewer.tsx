@@ -35,11 +35,14 @@ export function PdfViewer({
   // Listen for targetPage changes from EvidenceCard clicks
   useEffect(() => {
     if (targetPage && targetPage >= 1 && targetPage <= totalPages) {
-      setCurrentPage(targetPage);
       const targetElement = pageRefs.current.get(targetPage);
       if (targetElement) {
         targetElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
+      const raf = requestAnimationFrame(() => {
+        setCurrentPage(targetPage);
+      });
+      return () => cancelAnimationFrame(raf);
     }
   }, [targetPage, totalPages]);
 

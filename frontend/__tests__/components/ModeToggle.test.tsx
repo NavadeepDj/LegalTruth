@@ -1,4 +1,3 @@
-import React from 'react';
 import { ModeToggle } from '@/components/Controls/ModeToggle';
 
 describe('ModeToggle Component', () => {

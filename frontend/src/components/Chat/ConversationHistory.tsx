@@ -43,7 +43,13 @@ export function ConversationHistory({
   }
 
   return (
-    <div className={styles.historyContainer} role="log" aria-label="Conversation with LegalTruth">
+    <div
+      className={styles.historyContainer}
+      role="log"
+      aria-label="Conversation with LegalTruth"
+      aria-live="polite"
+      aria-relevant="additions"
+    >
       {messages.map((msg, idx) => {
         if (msg.role === 'user') {
           return (

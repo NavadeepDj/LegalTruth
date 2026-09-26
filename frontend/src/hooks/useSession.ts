@@ -46,7 +46,17 @@ export function useSession() {
   }, []);
 
   useEffect(() => {
-    initSession();
+    let active = true;
+    const run = async () => {
+      await Promise.resolve();
+      if (active) {
+        await initSession();
+      }
+    };
+    run();
+    return () => {
+      active = false;
+    };
   }, [initSession]);
 
   const upload = useCallback(

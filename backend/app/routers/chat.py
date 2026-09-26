@@ -4,6 +4,7 @@ from fastapi import APIRouter, HTTPException
 from app.models.schemas import QuestionRequest, ClauseRequest, AnswerResponse
 from app.models.session_store import store
 from app.services.evidence_service import answer_question, answer_clause
+from app.services.cache_service import query_cache
 
 router = APIRouter(prefix="/api/chat", tags=["chat"])
 
@@ -19,6 +20,13 @@ async def ask_question_endpoint(request: QuestionRequest):
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
 
+    # Check query cache for instant sub-millisecond response
+    cached_response = query_cache.get(request.document_id, request.question, request.mode)
+    if cached_response:
+        store.add_conversation_entry(request.session_id, "user", request.question)
+        store.add_conversation_entry(request.session_id, "assistant", cached_response.answer)
+        return cached_response
+
     history = [
         {"role": e.role, "content": e.content}
         for e in store.get_conversation(request.session_id)
@@ -31,6 +39,7 @@ async def ask_question_endpoint(request: QuestionRequest):
         conversation_history=history if history else None,
     )
 
+    query_cache.set(request.document_id, request.question, response, request.mode)
     store.add_conversation_entry(request.session_id, "user", request.question)
     store.add_conversation_entry(request.session_id, "assistant", response.answer)
 
@@ -48,12 +57,18 @@ async def explain_clause_endpoint(request: ClauseRequest):
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
 
+    # Check cache for clause explanation
+    cached_response = query_cache.get(request.document_id, request.clause_text, str(request.page_number))
+    if cached_response:
+        return cached_response
+
     response = answer_clause(
         clause_text=request.clause_text,
         page_number=request.page_number,
         document_text=doc.parsed.full_text,
     )
 
+    query_cache.set(request.document_id, request.clause_text, response, str(request.page_number))
     return response
 
 

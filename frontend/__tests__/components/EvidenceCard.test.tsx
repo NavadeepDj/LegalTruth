@@ -1,4 +1,3 @@
-import React from 'react';
 import { EvidenceCard } from '@/components/Chat/EvidenceCard';
 import { EvidenceItem } from '@/lib/types';
 
